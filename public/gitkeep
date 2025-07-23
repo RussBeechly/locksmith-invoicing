@@ -1,0 +1,2 @@
+public/
+   └── .gitkeep   (just to ensure Git tracks the empty folder)
