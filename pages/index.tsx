@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 
 type Item = {
@@ -67,6 +69,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
