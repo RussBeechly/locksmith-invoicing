@@ -8,10 +8,9 @@ type Item = {
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
-  const [price, setPrice] = useState<number>(0); // ✅ price is declared here!
+  const [price, setPrice] = useState<number>(0);
 
   const addItem = () => {
-    console.log("Adding item:", desc, price); // ✅ Debugging
     if (!desc || price <= 0) return;
     const newItem: Item = { desc, price };
     setItems((prev) => [...prev, newItem]);
@@ -38,7 +37,7 @@ export default function Home() {
         <input
           type="number"
           placeholder="Price"
-          value={price === 0 ? "" : price} // ✅ Works now
+          value={price === 0 ? "" : price}
           onChange={(e) => setPrice(Number(e.target.value) || 0)}
           className="border p-2 rounded w-1/4"
         />
@@ -68,6 +67,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
