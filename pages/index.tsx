@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Item = {
   desc: string;
@@ -9,6 +9,19 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number>(0);
+
+  // ✅ Load saved items when the app starts
+  useEffect(() => {
+    const savedItems = localStorage.getItem("invoiceItems");
+    if (savedItems) {
+      setItems(JSON.parse(savedItems));
+    }
+  }, []);
+
+  // ✅ Save items every time they change
+  useEffect(() => {
+    localStorage.setItem("invoiceItems", JSON.stringify(items));
+  }, [items]);
 
   const addItem = () => {
     if (!desc || price <= 0) return;
@@ -67,6 +80,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
