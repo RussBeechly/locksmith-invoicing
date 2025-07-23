@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 
 type Item = {
+  id: number;
   desc: string;
   price: number;
 };
@@ -11,26 +12,54 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number>(0);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
-  // ✅ Load saved items on first render
+  // Load items from localStorage
   useEffect(() => {
-    const savedItems = localStorage.getItem("items");
-    if (savedItems) {
-      setItems(JSON.parse(savedItems));
+    const saved = localStorage.getItem("invoiceItems");
+    if (saved) {
+      setItems(JSON.parse(saved));
     }
   }, []);
 
-  // ✅ Save items whenever they change
+  // Save items to localStorage
   useEffect(() => {
-    localStorage.setItem("items", JSON.stringify(items));
+    localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
 
   const addItem = () => {
     if (!desc || price <= 0) return;
-    const newItem: Item = { desc, price };
-    setItems((prev) => [...prev, newItem]);
+
+    if (editingId !== null) {
+      // Editing existing item
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === editingId ? { ...item, desc, price } : item
+        )
+      );
+      setEditingId(null);
+    } else {
+      // Adding new item
+      const newItem: Item = {
+        id: Date.now(),
+        desc,
+        price,
+      };
+      setItems((prev) => [...prev, newItem]);
+    }
+
     setDesc("");
     setPrice(0);
+  };
+
+  const deleteItem = (id: number) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const startEdit = (item: Item) => {
+    setEditingId(item.id);
+    setDesc(item.desc);
+    setPrice(item.price);
   };
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
@@ -53,25 +82,41 @@ export default function Home() {
           type="number"
           placeholder="Price"
           value={price === 0 ? "" : price}
-          onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+          onChange={(e) => setPrice(Number(e.target.value) || 0)}
           className="border p-2 rounded w-1/4"
         />
         <button
           onClick={addItem}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          Add
+          {editingId !== null ? "Update" : "Add"}
         </button>
       </div>
 
       <ul className="space-y-2 mb-4">
-        {items.map((item, index) => (
+        {items.map((item) => (
           <li
-            key={index}
+            key={item.id}
             className="flex justify-between border-b py-1 text-gray-700"
           >
-            <span>{item.desc}</span>
-            <span>${item.price.toFixed(2)}</span>
+            <div>
+              <span className="font-medium">{item.desc}</span> - $
+              {item.price.toFixed(2)}
+            </div>
+            <div className="space-x-2">
+              <button
+                onClick={() => startEdit(item)}
+                className="text-sm text-blue-500 hover:underline"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => deleteItem(item.id)}
+                className="text-sm text-red-500 hover:underline"
+              >
+                Delete
+              </button>
+            </div>
           </li>
         ))}
       </ul>
@@ -82,6 +127,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
