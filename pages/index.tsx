@@ -1,40 +1,24 @@
-<input
-  type="number"
-  placeholder="Price"
-  value={price === 0 ? "" : price}
-  onChange={(e) => setPrice(Number(e.target.value) || 0)}
-  className="border p-2 rounded w-1/4"
-/>
+import { useState } from "react";
 
+type Item = {
+  desc: string;
+  price: number;
 };
 
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
-  const [price, setPrice] = useState<number>(0);
+  const [price, setPrice] = useState<number>(0); // ✅ price is declared here!
 
-  // ✅ Load saved items when the app starts
-  useEffect(() => {
-    const savedItems = localStorage.getItem("invoiceItems");
-    if (savedItems) {
-      setItems(JSON.parse(savedItems));
-    }
-  }, []);
+  const addItem = () => {
+    console.log("Adding item:", desc, price); // ✅ Debugging
+    if (!desc || price <= 0) return;
+    const newItem: Item = { desc, price };
+    setItems((prev) => [...prev, newItem]);
+    setDesc("");
+    setPrice(0);
+  };
 
-  // ✅ Save items every time they change
-  useEffect(() => {
-    localStorage.setItem("invoiceItems", JSON.stringify(items));
-  }, [items]);
-
-const addItem = () => {
-  console.log("Adding item:", desc, price); // ✅ Debugging
-  if (!desc || price <= 0) return;
-  const newItem: Item = { desc, price };
-  setItems((prev) => [...prev, newItem]);
-  setDesc("");
-  setPrice(0);
-};
-  
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
   return (
@@ -52,13 +36,11 @@ const addItem = () => {
           className="border p-2 rounded w-1/2"
         />
         <input
-  type="number"
-  placeholder="Price"
-  value={price === 0 ? "" : price}
-  onChange={(e) => setPrice(Number(e.target.value) || 0)}
-  className="border p-2 rounded w-1/4"
-/>
-
+          type="number"
+          placeholder="Price"
+          value={price === 0 ? "" : price} // ✅ Works now
+          onChange={(e) => setPrice(Number(e.target.value) || 0)}
+          className="border p-2 rounded w-1/4"
         />
         <button
           onClick={addItem}
@@ -86,6 +68,7 @@ const addItem = () => {
     </div>
   );
 }
+
 
 
 
