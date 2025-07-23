@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+<input
+  type="number"
+  placeholder="Price"
+  value={price === 0 ? "" : price}
+  onChange={(e) => setPrice(Number(e.target.value) || 0)}
+  className="border p-2 rounded w-1/4"
+/>
 
-type Item = {
-  desc: string;
-  price: number;
 };
 
 export default function Home() {
@@ -23,14 +26,15 @@ export default function Home() {
     localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
 
-  const addItem = () => {
-    if (!desc || price <= 0) return;
-    const newItem: Item = { desc, price };
-    setItems((prev) => [...prev, newItem]);
-    setDesc("");
-    setPrice(0);
-  };
-
+const addItem = () => {
+  console.log("Adding item:", desc, price); // ✅ Debugging
+  if (!desc || price <= 0) return;
+  const newItem: Item = { desc, price };
+  setItems((prev) => [...prev, newItem]);
+  setDesc("");
+  setPrice(0);
+};
+  
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
   return (
@@ -48,11 +52,13 @@ export default function Home() {
           className="border p-2 rounded w-1/2"
         />
         <input
-          type="number"
-          placeholder="Price"
-          value={price || ""}
-          onChange={(e) => setPrice(parseFloat(e.target.value))}
-          className="border p-2 rounded w-1/4"
+  type="number"
+  placeholder="Price"
+  value={price === 0 ? "" : price}
+  onChange={(e) => setPrice(Number(e.target.value) || 0)}
+  className="border p-2 rounded w-1/4"
+/>
+
         />
         <button
           onClick={addItem}
