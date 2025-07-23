@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Item = {
   desc: string;
@@ -11,6 +11,19 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number>(0);
+
+  // ✅ Load saved items on first render
+  useEffect(() => {
+    const savedItems = localStorage.getItem("items");
+    if (savedItems) {
+      setItems(JSON.parse(savedItems));
+    }
+  }, []);
+
+  // ✅ Save items whenever they change
+  useEffect(() => {
+    localStorage.setItem("items", JSON.stringify(items));
+  }, [items]);
 
   const addItem = () => {
     if (!desc || price <= 0) return;
@@ -40,7 +53,7 @@ export default function Home() {
           type="number"
           placeholder="Price"
           value={price === 0 ? "" : price}
-          onChange={(e) => setPrice(Number(e.target.value) || 0)}
+          onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
           className="border p-2 rounded w-1/4"
         />
         <button
