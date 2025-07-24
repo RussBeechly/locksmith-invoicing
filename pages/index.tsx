@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx"; // ✅ XLSX for Excel export
 
 type Item = {
   desc: string;
@@ -12,54 +12,39 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number | "">("");
-  const [selectedTech, setSelectedTech] = useState("");
-  const [selectedAccount, setSelectedAccount] = useState("");
   const [notes, setNotes] = useState("");
-
-  // Mock technician and accounts (replace with dynamic later)
-  const technicians = [
-    { name: "Mark Lee (ALL)", market: "ALL" },
-    { name: "John Smith (TAL)", market: "TAL" },
-    { name: "Sarah Jones (JAX)", market: "JAX" },
-  ];
-
-  const accounts = [
-    { name: "Core Market Auto", market: "ALL" },
-    { name: "Core Market Residential", market: "ALL" },
-    { name: "Core Market Commercial", market: "ALL" },
-    { name: "Acme Corp", market: "TAL" },
-    { name: "Beta LLC", market: "JAX" },
-  ];
+  const [tech, setTech] = useState("");
+  const [account, setAccount] = useState("");
 
   // ✅ Load saved data from localStorage
   useEffect(() => {
     const savedItems = localStorage.getItem("invoiceItems");
+    const savedNotes = localStorage.getItem("invoiceNotes");
     const savedTech = localStorage.getItem("selectedTech");
     const savedAccount = localStorage.getItem("selectedAccount");
-    const savedNotes = localStorage.getItem("invoiceNotes");
 
     if (savedItems) setItems(JSON.parse(savedItems));
-    if (savedTech) setSelectedTech(savedTech);
-    if (savedAccount) setSelectedAccount(savedAccount);
     if (savedNotes) setNotes(savedNotes);
+    if (savedTech) setTech(savedTech);
+    if (savedAccount) setAccount(savedAccount);
   }, []);
 
-  // ✅ Save items, tech, account, and notes to localStorage
+  // ✅ Save data to localStorage
   useEffect(() => {
     localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
 
   useEffect(() => {
-    localStorage.setItem("selectedTech", selectedTech);
-  }, [selectedTech]);
-
-  useEffect(() => {
-    localStorage.setItem("selectedAccount", selectedAccount);
-  }, [selectedAccount]);
-
-  useEffect(() => {
     localStorage.setItem("invoiceNotes", notes);
   }, [notes]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedTech", tech);
+  }, [tech]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedAccount", account);
+  }, [account]);
 
   const addItem = () => {
     if (!desc || !price || Number(price) <= 0) return;
@@ -68,9 +53,14 @@ export default function Home() {
     setPrice("");
   };
 
-  const updateItem = (index: number, key: keyof Item, value: string | number) => {
+  // ✅ Option 2 fix — strict type-safe updating
+  const updateItem = <K extends keyof Item>(
+    index: number,
+    key: K,
+    value: Item[K]
+  ) => {
     const updated = [...items];
-    updated[index][key] = key === "price" ? Number(value) : (value as string);
+    updated[index][key] = value;
     setItems(updated);
   };
 
@@ -81,59 +71,48 @@ export default function Home() {
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
   const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet([
-      { Technician: selectedTech, Account: selectedAccount, Notes: notes },
+    const worksheet = XLSX.utils.json_to_sheet([
+      { Technician: tech, Account: account, Notes: notes, Total: total },
+      {},
       ...items.map((item) => ({
         Description: item.desc,
         Price: item.price.toFixed(2),
       })),
-      { Total: total.toFixed(2) },
     ]);
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Invoice");
-    XLSX.writeFile(wb, "invoice.xlsx");
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+    XLSX.writeFile(workbook, "invoice.xlsx");
   };
-
-  // ✅ Filter accounts: always include "ALL" + tech's specific market
-  const filteredAccounts = accounts.filter(
-    (acc) =>
-      acc.market === "ALL" ||
-      technicians.find((t) => t.name === selectedTech)?.market === acc.market
-  );
 
   return (
     <div className="p-6 max-w-xl mx-auto">
       <h1 className="text-3xl font-bold text-blue-600 mb-4">Locksmith Invoicing</h1>
 
-      {/* Technician Selection */}
+      {/* Technician Dropdown */}
       <label className="font-semibold">Select Technician:</label>
       <select
-        value={selectedTech}
-        onChange={(e) => setSelectedTech(e.target.value)}
+        value={tech}
+        onChange={(e) => setTech(e.target.value)}
         className="border p-2 rounded w-full mb-4"
       >
         <option value="">-- Select Technician --</option>
-        {technicians.map((tech, index) => (
-          <option key={index} value={tech.name}>
-            {tech.name}
-          </option>
-        ))}
+        <option value="Mark Lee (ALL)">Mark Lee (ALL)</option>
+        <option value="John Smith">John Smith</option>
+        {/* ✅ We’ll replace this with dynamic techs later */}
       </select>
 
-      {/* Account Selection */}
+      {/* Account Dropdown */}
       <label className="font-semibold">Select Account:</label>
       <select
-        value={selectedAccount}
-        onChange={(e) => setSelectedAccount(e.target.value)}
+        value={account}
+        onChange={(e) => setAccount(e.target.value)}
         className="border p-2 rounded w-full mb-4"
       >
         <option value="">-- Select Account --</option>
-        {filteredAccounts.map((acc, index) => (
-          <option key={index} value={acc.name}>
-            {acc.name}
-          </option>
-        ))}
+        <option value="Core Market Auto">Core Market Auto</option>
+        <option value="Core Market Residential">Core Market Residential</option>
+        <option value="Core Market Commercial">Core Market Commercial</option>
+        {/* ✅ Will dynamically populate from CSV later */}
       </select>
 
       {/* Notes */}
@@ -145,7 +124,7 @@ export default function Home() {
         rows={3}
       />
 
-      {/* Add Item Form */}
+      {/* Add Item */}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -158,7 +137,9 @@ export default function Home() {
           type="number"
           placeholder="Price"
           value={price === "" ? "" : price}
-          onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+          onChange={(e) =>
+            setPrice(e.target.value === "" ? "" : Number(e.target.value))
+          }
           className="border p-2 rounded w-1/4"
         />
         <button
@@ -172,18 +153,24 @@ export default function Home() {
       {/* Item List */}
       <ul className="space-y-2 mb-4">
         {items.map((item, index) => (
-          <li key={index} className="flex justify-between border-b py-1 text-gray-700">
+          <li key={index} className="flex justify-between gap-2">
             <input
               type="text"
               value={item.desc}
-              onChange={(e) => updateItem(index, "desc", e.target.value)}
+              onChange={(e) =>
+                updateItem(index, "desc", e.target.value as Item["desc"])
+              }
               className="border p-1 rounded w-1/2"
             />
             <input
               type="number"
               value={item.price}
               onChange={(e) =>
-                updateItem(index, "price", e.target.value === "" ? 0 : Number(e.target.value))
+                updateItem(
+                  index,
+                  "price",
+                  e.target.value === "" ? 0 : Number(e.target.value)
+                )
               }
               className="border p-1 rounded w-1/4 text-right"
             />
@@ -198,7 +185,9 @@ export default function Home() {
       </ul>
 
       {/* Total */}
-      <div className="text-right font-bold text-xl mb-4">Total: ${total.toFixed(2)}</div>
+      <div className="text-right font-bold text-xl mb-4">
+        Total: ${total.toFixed(2)}
+      </div>
 
       {/* Export Button */}
       <button
@@ -210,6 +199,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
