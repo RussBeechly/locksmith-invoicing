@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// @ts-ignore
-import * as XLSX from "xlsx"; // ✅ XLSX for Excel export
+import * as XLSX from "xlsx"; // ✅ Excel export
 
 type Item = {
   desc: string;
@@ -13,19 +12,25 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number | "">("");
+  const [invoiceNumber, setInvoiceNumber] = useState<number>(1001);
 
-  // ✅ Load from localStorage
+  // ✅ Load saved items and invoice number from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("invoiceItems");
-    if (saved) {
-      setItems(JSON.parse(saved));
-    }
+    if (saved) setItems(JSON.parse(saved));
+
+    const savedInvoiceNumber = localStorage.getItem("invoiceNumber");
+    if (savedInvoiceNumber) setInvoiceNumber(Number(savedInvoiceNumber));
   }, []);
 
-  // ✅ Save to localStorage
+  // ✅ Save items & invoice number when they change
   useEffect(() => {
     localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem("invoiceNumber", String(invoiceNumber));
+  }, [invoiceNumber]);
 
   const addItem = () => {
     if (!desc || !price || Number(price) <= 0) return;
@@ -35,41 +40,43 @@ export default function Home() {
   };
 
   const updateItem = (index: number, key: keyof Item, value: string | number) => {
-  const updated = [...items];
-  updated[index] = {
-    ...updated[index],
-    [key]: key === "price" ? Number(value) : (value as string),
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, [key]: key === "price" ? Number(value) : (value as string) }
+          : item
+      )
+    );
   };
-  setItems(updated);
-};
-
 
   const deleteItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
-  // ✅ Export to XLSX
-  const exportToXLSX = () => {
-    const worksheetData = [
-      ["Description", "Price"],
-      ...items.map((item) => [item.desc, item.price]),
-      ["Total", total],
-    ];
-
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
-
-    XLSX.writeFile(workbook, "invoice.xlsx");
+  const exportToExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(items);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Invoice");
+    XLSX.writeFile(wb, `Invoice_${invoiceNumber}.xlsx`);
   };
+
+  const newInvoice = () => {
+    setItems([]);
+    setInvoiceNumber((prev) => prev + 1);
+    localStorage.setItem("invoiceItems", JSON.stringify([]));
+  };
+
+  const today = new Date().toLocaleDateString();
 
   return (
     <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-3xl font-bold text-blue-600 mb-4">Locksmith Invoicing</h1>
+      <h1 className="text-3xl font-bold text-blue-600 mb-2">Locksmith Invoicing</h1>
+      <div className="mb-4 text-gray-700 font-semibold">
+        Invoice #{invoiceNumber} – {today}
+      </div>
 
-      {/* Add Item Form */}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -93,7 +100,6 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Editable Items List */}
       <ul className="space-y-2 mb-4">
         {items.map((item, index) => (
           <li key={index} className="flex justify-between border-b py-1 text-gray-700">
@@ -121,19 +127,28 @@ export default function Home() {
         ))}
       </ul>
 
-      {/* Total */}
-      <div className="text-right font-bold text-xl mb-4">Total: ${total.toFixed(2)}</div>
+      <div className="text-right font-bold text-xl mb-4">
+        Total: ${total.toFixed(2)}
+      </div>
 
-      {/* Export to XLSX Button */}
-      <button
-        onClick={exportToXLSX}
-        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-      >
-        Export to Excel
-      </button>
+      <div className="flex justify-between">
+        <button
+          onClick={newInvoice}
+          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+        >
+          New Invoice
+        </button>
+        <button
+          onClick={exportToExcel}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Export to Excel
+        </button>
+      </div>
     </div>
   );
 }
+
 
 
 
