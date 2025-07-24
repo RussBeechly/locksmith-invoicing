@@ -1,7 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import * as XLSX from "xlsx"; // ✅ Excel export
+
+// ✅ Hardcoded Techs & Markets (from your XLS)
+const TECHS = [
+  { name: "John Smith", market: "TPA" },
+  { name: "Jane Doe", market: "BHM" },
+  { name: "Alex Brown", market: "JAX" },
+  // Add more as needed...
+];
+
+// ✅ Hardcoded Accounts (from your CSV)
+const ACCOUNTS = [
+  { name: "1 Stop Maintenance", rules: "Bill net 30, service fee waived", location: "All" },
+  { name: "ABC Properties", rules: "Add $25 after hours", location: "TPA" },
+  { name: "Sunrise Apartments", rules: "Must call before service", location: "BHM" },
+  // Add more as needed...
+];
 
 type Item = {
   desc: string;
@@ -9,28 +24,26 @@ type Item = {
 };
 
 export default function Home() {
+  const [tech, setTech] = useState<string>("");
+  const [market, setMarket] = useState<string>("");
+  const [account, setAccount] = useState<string>("");
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number | "">("");
-  const [invoiceNumber, setInvoiceNumber] = useState<number>(1001);
+  const [po, setPO] = useState("");
+  const [notes, setNotes] = useState("");
 
-  // ✅ Load saved items and invoice number from localStorage
+  // ✅ Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("invoiceItems");
-    if (saved) setItems(JSON.parse(saved));
-
-    const savedInvoiceNumber = localStorage.getItem("invoiceNumber");
-    if (savedInvoiceNumber) setInvoiceNumber(Number(savedInvoiceNumber));
+    if (saved) {
+      setItems(JSON.parse(saved));
+    }
   }, []);
 
-  // ✅ Save items & invoice number when they change
   useEffect(() => {
     localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
-
-  useEffect(() => {
-    localStorage.setItem("invoiceNumber", String(invoiceNumber));
-  }, [invoiceNumber]);
 
   const addItem = () => {
     if (!desc || !price || Number(price) <= 0) return;
@@ -40,43 +53,93 @@ export default function Home() {
   };
 
   const updateItem = (index: number, key: keyof Item, value: string | number) => {
-    setItems((prev) =>
-      prev.map((item, i) =>
-        i === index
-          ? { ...item, [key]: key === "price" ? Number(value) : (value as string) }
-          : item
-      )
-    );
+    const updated = [...items];
+    updated[index][key] = key === "price" ? Number(value) : (value as string);
+    setItems(updated);
   };
 
   const deleteItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    setItems(items.filter((_, i) => i !== index));
   };
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
-  const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(items);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Invoice");
-    XLSX.writeFile(wb, `Invoice_${invoiceNumber}.xlsx`);
-  };
+  const filteredAccounts = ACCOUNTS.filter(
+    (acc) => acc.location === "All" || acc.location === market
+  );
 
-  const newInvoice = () => {
-    setItems([]);
-    setInvoiceNumber((prev) => prev + 1);
-    localStorage.setItem("invoiceItems", JSON.stringify([]));
+  const showRules = () => {
+    const acc = ACCOUNTS.find((a) => a.name === account);
+    if (acc) alert(`Billing Rules: ${acc.rules}`);
   };
-
-  const today = new Date().toLocaleDateString();
 
   return (
     <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-3xl font-bold text-blue-600 mb-2">Locksmith Invoicing</h1>
-      <div className="mb-4 text-gray-700 font-semibold">
-        Invoice #{invoiceNumber} – {today}
+      <h1 className="text-3xl font-bold text-blue-600 mb-4">Locksmith Invoicing</h1>
+
+      {/* ✅ Tech Selection */}
+      <div className="mb-4">
+        <label className="font-bold">Select Technician:</label>
+        <select
+          value={tech}
+          onChange={(e) => {
+            const selectedTech = TECHS.find((t) => t.name === e.target.value);
+            setTech(e.target.value);
+            setMarket(selectedTech ? selectedTech.market : "");
+            setAccount(""); // reset account when tech changes
+          }}
+          className="border p-2 rounded w-full mt-1"
+        >
+          <option value="">-- Select Tech --</option>
+          {TECHS.map((t, i) => (
+            <option key={i} value={t.name}>
+              {t.name} ({t.market})
+            </option>
+          ))}
+        </select>
       </div>
 
+      {/* ✅ Account Selection */}
+      {market && (
+        <div className="mb-4">
+          <label className="font-bold">Select Account:</label>
+          <select
+            value={account}
+            onChange={(e) => {
+              setAccount(e.target.value);
+              showRules();
+            }}
+            className="border p-2 rounded w-full mt-1"
+          >
+            <option value="">-- Select Account --</option>
+            {filteredAccounts.map((acc, i) => (
+              <option key={i} value={acc.name}>
+                {acc.name} ({acc.location})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* ✅ PO & Notes */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="PO Number"
+          value={po}
+          onChange={(e) => setPO(e.target.value)}
+          className="border p-2 rounded w-full mb-2"
+        />
+        <textarea
+          placeholder="Notes (Work performed)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="border p-2 rounded w-full"
+          rows={3}
+        />
+      </div>
+
+      {/* ✅ Add Item Form */}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -100,6 +163,7 @@ export default function Home() {
         </button>
       </div>
 
+      {/* ✅ Item List */}
       <ul className="space-y-2 mb-4">
         {items.map((item, index) => (
           <li key={index} className="flex justify-between border-b py-1 text-gray-700">
@@ -127,27 +191,12 @@ export default function Home() {
         ))}
       </ul>
 
-      <div className="text-right font-bold text-xl mb-4">
-        Total: ${total.toFixed(2)}
-      </div>
-
-      <div className="flex justify-between">
-        <button
-          onClick={newInvoice}
-          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-        >
-          New Invoice
-        </button>
-        <button
-          onClick={exportToExcel}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-        >
-          Export to Excel
-        </button>
-      </div>
+      {/* ✅ Total */}
+      <div className="text-right font-bold text-xl mb-4">Total: ${total.toFixed(2)}</div>
     </div>
   );
 }
+
 
 
 
