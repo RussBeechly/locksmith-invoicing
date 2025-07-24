@@ -35,10 +35,14 @@ export default function Home() {
   };
 
   const updateItem = (index: number, key: keyof Item, value: string | number) => {
-    const updated = [...items];
-    updated[index][key] = key === "price" ? Number(value) : (value as string);
-    setItems(updated);
+  const updated = [...items];
+  updated[index] = {
+    ...updated[index],
+    [key]: key === "price" ? Number(value) : (value as string),
   };
+  setItems(updated);
+};
+
 
   const deleteItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
