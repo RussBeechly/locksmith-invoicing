@@ -1,50 +1,61 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 
-// ✅ Hardcoded Techs & Markets (from your XLS)
-const TECHS = [
-  { name: "John Smith", market: "TPA" },
-  { name: "Jane Doe", market: "BHM" },
-  { name: "Alex Brown", market: "JAX" },
-  // Add more as needed...
-];
-
-// ✅ Hardcoded Accounts (from your CSV)
-const ACCOUNTS = [
-  { name: "1 Stop Maintenance", rules: "Bill net 30, service fee waived", location: "All" },
-  { name: "ABC Properties", rules: "Add $25 after hours", location: "TPA" },
-  { name: "Sunrise Apartments", rules: "Must call before service", location: "BHM" },
-  // Add more as needed...
-];
-
+// ✅ Types
 type Item = {
   desc: string;
   price: number;
 };
 
 export default function Home() {
-  const [tech, setTech] = useState<string>("");
-  const [market, setMarket] = useState<string>("");
-  const [account, setAccount] = useState<string>("");
+  // ✅ Line items
   const [items, setItems] = useState<Item[]>([]);
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number | "">("");
-  const [po, setPO] = useState("");
+
+  // ✅ New: Tech, Account, Notes
+  const [selectedTech, setSelectedTech] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState("");
   const [notes, setNotes] = useState("");
 
-  // ✅ Load from localStorage
+  // ✅ Example Techs (replace later with XLS)
+  const techs = ["John Doe", "Jane Smith", "Alex Brown"];
+  // ✅ Example Accounts (replace later with CSV data)
+  const accounts = ["Core Market Auto", "Core Market Commercial", "Test Account A"];
+
+  // ✅ Load saved data from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("invoiceItems");
-    if (saved) {
-      setItems(JSON.parse(saved));
-    }
+    const savedItems = localStorage.getItem("invoiceItems");
+    const savedTech = localStorage.getItem("selectedTech");
+    const savedAccount = localStorage.getItem("selectedAccount");
+    const savedNotes = localStorage.getItem("invoiceNotes");
+
+    if (savedItems) setItems(JSON.parse(savedItems));
+    if (savedTech) setSelectedTech(savedTech);
+    if (savedAccount) setSelectedAccount(savedAccount);
+    if (savedNotes) setNotes(savedNotes);
   }, []);
 
+  // ✅ Save data to localStorage
   useEffect(() => {
     localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
 
+  useEffect(() => {
+    localStorage.setItem("selectedTech", selectedTech);
+  }, [selectedTech]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedAccount", selectedAccount);
+  }, [selectedAccount]);
+
+  useEffect(() => {
+    localStorage.setItem("invoiceNotes", notes);
+  }, [notes]);
+
+  // ✅ Add / Update / Delete Items
   const addItem = () => {
     if (!desc || !price || Number(price) <= 0) return;
     setItems((prev) => [...prev, { desc, price: Number(price) }]);
@@ -53,12 +64,14 @@ export default function Home() {
   };
 
   const updateItem = (index: number, key: keyof Item, value: string | number) => {
-  const updated = [...items];
-  (updated[index][key] as Item[keyof Item]) =
-    key === "price" ? Number(value) : (value as string);
-  setItems(updated);
-};
-
+    const updated = [...items];
+    if (key === "price") {
+      updated[index][key] = Number(value);
+    } else {
+      updated[index][key] = value as string;
+    }
+    setItems(updated);
+  };
 
   const deleteItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
@@ -66,79 +79,56 @@ export default function Home() {
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
-  const filteredAccounts = ACCOUNTS.filter(
-    (acc) => acc.location === "All" || acc.location === market
-  );
+  // ✅ Export to Excel
+  const exportToExcel = () => {
+    const worksheetData = [
+      ["Tech", selectedTech],
+      ["Account", selectedAccount],
+      ["Notes", notes],
+      [],
+      ["Description", "Price"],
+      ...items.map((item) => [item.desc, item.price]),
+      [],
+      ["Total", total],
+    ];
 
-  const showRules = () => {
-    const acc = ACCOUNTS.find((a) => a.name === account);
-    if (acc) alert(`Billing Rules: ${acc.rules}`);
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Invoice");
+    XLSX.writeFile(wb, "invoice.xlsx");
   };
 
   return (
     <div className="p-6 max-w-xl mx-auto">
       <h1 className="text-3xl font-bold text-blue-600 mb-4">Locksmith Invoicing</h1>
 
-      {/* ✅ Tech Selection */}
-      <div className="mb-4">
-        <label className="font-bold">Select Technician:</label>
+      {/* ✅ Tech & Account Selection */}
+      <div className="flex gap-2 mb-4">
         <select
-          value={tech}
-          onChange={(e) => {
-            const selectedTech = TECHS.find((t) => t.name === e.target.value);
-            setTech(e.target.value);
-            setMarket(selectedTech ? selectedTech.market : "");
-            setAccount(""); // reset account when tech changes
-          }}
-          className="border p-2 rounded w-full mt-1"
+          value={selectedTech}
+          onChange={(e) => setSelectedTech(e.target.value)}
+          className="border p-2 rounded w-1/2"
         >
-          <option value="">-- Select Tech --</option>
-          {TECHS.map((t, i) => (
-            <option key={i} value={t.name}>
-              {t.name} ({t.market})
+          <option value="">Select Tech</option>
+          {techs.map((tech, i) => (
+            <option key={i} value={tech}>
+              {tech}
             </option>
           ))}
         </select>
-      </div>
 
-      {/* ✅ Account Selection */}
-      {market && (
-        <div className="mb-4">
-          <label className="font-bold">Select Account:</label>
-          <select
-            value={account}
-            onChange={(e) => {
-              setAccount(e.target.value);
-              showRules();
-            }}
-            className="border p-2 rounded w-full mt-1"
-          >
-            <option value="">-- Select Account --</option>
-            {filteredAccounts.map((acc, i) => (
-              <option key={i} value={acc.name}>
-                {acc.name} ({acc.location})
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ✅ PO & Notes */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="PO Number"
-          value={po}
-          onChange={(e) => setPO(e.target.value)}
-          className="border p-2 rounded w-full mb-2"
-        />
-        <textarea
-          placeholder="Notes (Work performed)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="border p-2 rounded w-full"
-          rows={3}
-        />
+        <select
+          value={selectedAccount}
+          onChange={(e) => setSelectedAccount(e.target.value)}
+          className="border p-2 rounded w-1/2"
+        >
+          <option value="">Select Account</option>
+          {accounts.map((acc, i) => (
+            <option key={i} value={acc}>
+              {acc}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* ✅ Add Item Form */}
@@ -154,7 +144,9 @@ export default function Home() {
           type="number"
           placeholder="Price"
           value={price === "" ? "" : price}
-          onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+          onChange={(e) =>
+            setPrice(e.target.value === "" ? "" : Number(e.target.value))
+          }
           className="border p-2 rounded w-1/4"
         />
         <button
@@ -165,10 +157,13 @@ export default function Home() {
         </button>
       </div>
 
-      {/* ✅ Item List */}
+      {/* ✅ Items List */}
       <ul className="space-y-2 mb-4">
         {items.map((item, index) => (
-          <li key={index} className="flex justify-between border-b py-1 text-gray-700">
+          <li
+            key={index}
+            className="flex justify-between border-b py-1 text-gray-700"
+          >
             <input
               type="text"
               value={item.desc}
@@ -179,7 +174,11 @@ export default function Home() {
               type="number"
               value={item.price}
               onChange={(e) =>
-                updateItem(index, "price", e.target.value === "" ? 0 : Number(e.target.value))
+                updateItem(
+                  index,
+                  "price",
+                  e.target.value === "" ? 0 : Number(e.target.value)
+                )
               }
               className="border p-1 rounded w-1/4 text-right"
             />
@@ -193,8 +192,25 @@ export default function Home() {
         ))}
       </ul>
 
-      {/* ✅ Total */}
-      <div className="text-right font-bold text-xl mb-4">Total: ${total.toFixed(2)}</div>
+      {/* ✅ Notes Field */}
+      <textarea
+        placeholder="Notes (work performed, additional info)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        className="border p-2 rounded w-full mb-4"
+        rows={4}
+      ></textarea>
+
+      {/* ✅ Total & Export */}
+      <div className="text-right font-bold text-xl mb-4">
+        Total: ${total.toFixed(2)}
+      </div>
+      <button
+        onClick={exportToExcel}
+        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+      >
+        Export to Excel
+      </button>
     </div>
   );
 }
