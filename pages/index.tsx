@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import * as XLSX from "xlsx"; // ✅ NEW for Excel export
 
 type Item = {
   desc: string;
@@ -44,22 +45,25 @@ export default function Home() {
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
-  const exportToCSV = () => {
-    const csv = [
-      ["Description", "Price"],
-      ...items.map((item) => [item.desc, item.price.toFixed(2)]),
-      ["Total", total.toFixed(2)],
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+  // ✅ Export to Excel (XLSX)
+  const exportToXLS = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      items.map((item) => ({
+        Description: item.desc,
+        Price: item.price.toFixed(2),
+      }))
+    );
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "invoice.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    // Add Total row at the end
+    const totalRowIndex = items.length + 1;
+    XLSX.utils.sheet_add_aoa(worksheet, [["Total", total.toFixed(2)]], {
+      origin: `A${totalRowIndex + 1}`,
+    });
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+
+    XLSX.writeFile(workbook, "invoice.xlsx");
   };
 
   return (
@@ -121,16 +125,17 @@ export default function Home() {
       {/* Total */}
       <div className="text-right font-bold text-xl mb-4">Total: ${total.toFixed(2)}</div>
 
-      {/* Export Button */}
+      {/* ✅ Export to Excel Button */}
       <button
-        onClick={exportToCSV}
+        onClick={exportToXLS}
         className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
       >
-        Export to CSV
+        Export to Excel
       </button>
     </div>
   );
 }
+
 
 
 
