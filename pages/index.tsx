@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+// @ts-ignore
 import * as XLSX from "xlsx"; // ✅ XLSX for Excel export
 
 type Item = {
