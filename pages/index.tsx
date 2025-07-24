@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import * as XLSX from "xlsx"; // ✅ NEW for Excel export
+import * as XLSX from "xlsx"; // ✅ XLSX for Excel export
 
 type Item = {
   desc: string;
@@ -13,7 +13,7 @@ export default function Home() {
   const [desc, setDesc] = useState("");
   const [price, setPrice] = useState<number | "">("");
 
-  // ✅ Load saved items from localStorage
+  // ✅ Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("invoiceItems");
     if (saved) {
@@ -21,7 +21,7 @@ export default function Home() {
     }
   }, []);
 
-  // ✅ Save items to localStorage whenever they change
+  // ✅ Save to localStorage
   useEffect(() => {
     localStorage.setItem("invoiceItems", JSON.stringify(items));
   }, [items]);
@@ -45,21 +45,15 @@ export default function Home() {
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
-  // ✅ Export to Excel (XLSX)
-  const exportToXLS = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      items.map((item) => ({
-        Description: item.desc,
-        Price: item.price.toFixed(2),
-      }))
-    );
+  // ✅ Export to XLSX
+  const exportToXLSX = () => {
+    const worksheetData = [
+      ["Description", "Price"],
+      ...items.map((item) => [item.desc, item.price]),
+      ["Total", total],
+    ];
 
-    // Add Total row at the end
-    const totalRowIndex = items.length + 1;
-    XLSX.utils.sheet_add_aoa(worksheet, [["Total", total.toFixed(2)]], {
-      origin: `A${totalRowIndex + 1}`,
-    });
-
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
 
@@ -94,7 +88,7 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Item List with Editable Fields */}
+      {/* Editable Items List */}
       <ul className="space-y-2 mb-4">
         {items.map((item, index) => (
           <li key={index} className="flex justify-between border-b py-1 text-gray-700">
@@ -125,9 +119,9 @@ export default function Home() {
       {/* Total */}
       <div className="text-right font-bold text-xl mb-4">Total: ${total.toFixed(2)}</div>
 
-      {/* ✅ Export to Excel Button */}
+      {/* Export to XLSX Button */}
       <button
-        onClick={exportToXLS}
+        onClick={exportToXLSX}
         className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
       >
         Export to Excel
@@ -135,6 +129,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
